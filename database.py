@@ -13,3 +13,5 @@ class Database():
             cur.execute(command, parametros)
             con.commit()
             return cur.fetchall()
+        
+    
