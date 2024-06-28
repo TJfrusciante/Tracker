@@ -7,6 +7,10 @@ class Database():
         self.results = self.manipular_db('SELECT * FROM tasks')
         self.transactions = self.manipular_db('SELECT * FROM money')
 
+    def update_variables(self):
+        self.results = self.manipular_db('SELECT * FROM tasks')
+        self.transactions = self.manipular_db('SELECT * FROM money')
+    
     def manipular_db(self, command, parametros = []):
         with sqlite3.connect("database.db") as con:
             cur = con.cursor()

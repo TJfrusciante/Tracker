@@ -25,6 +25,124 @@ class Components():
         #COMPONETS THAT WILL BE USED IN THE LAYOUT FILE
         #SEPARATED PARTS STORED IN VARIABLES FOR BETTER ACESS TO DATA
         
+        #COMPONENTS USED IN MONEY
+        self.description_money=ft.TextField(
+                    text_style=black,
+                    value='',
+                    label='Descrição da transação',
+                    label_style=teal,
+                    on_change=self.functions.set_value_money,
+                    on_submit=self.functions.limpar_value_text_box_money
+                )
+        
+        self.value_money=ft.TextField(
+                    text_style=black,
+                    value='',
+                    label='Valor da transação',
+                    label_style=teal,
+                    width=100,
+                    on_change=self.functions.set_value_money_float,
+                    on_submit=self.functions.limpar_value_text_box_money
+                )
+        
+        self.popup_money=ft.PopupMenuButton(
+                    icon=ft.icons.TOPIC_OUTLINED,
+                    tooltip='Selecionar seção',
+                    col={'xs':0.5,'xl':2},
+                    items=[
+                    ft.PopupMenuItem(text='Cartão',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Gasolina',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Apartamento',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Internet',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Diversos',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Picpay',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Ações',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='FIIs',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Salário',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Anderson',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Paula',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Mãe / Michelle',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Outros',checked=False,on_click=self.functions.check),
+                    ft.PopupMenuItem(text='Hora extra',checked=False,on_click=self.functions.check)
+                    ],   
+                )
+        
+        self.description_money=ft.TextField(
+                    text_style=black,
+                    value='',
+                    label='Descrição da transação',
+                    label_style=teal,
+                    on_change=self.functions.set_value_money,
+                    on_submit=self.functions.limpar_value_text_box_money
+                )
+        
+        self.value_money=ft.TextField(
+                    text_style=black,
+                    value='',
+                    label='Valor da transação',
+                    label_style=teal,
+                    width=100,
+                    on_change=self.functions.set_value_money_float,
+                    on_submit=self.functions.limpar_value_text_box_money
+                )
+        
+        self.tabs_money = ft.Tabs(
+            divider_color='teal',
+            selected_index=2,
+            unselected_label_color=ft.colors.BLACK,
+            label_color=ft.colors.TEAL,
+            indicator_color=ft.colors.BLUE,
+            tab_alignment=ft.TabAlignment.CENTER,
+            on_change=self.functions.tabs_changed_money,
+            tabs=[
+                ft.Tab(text="Entradas"), 
+                ft.Tab(text="Saídas"), 
+                ft.Tab(text="Todos")
+            ],
+        )
+
+        
+
+        self.row_money_insert= ft.Row(
+            controls=[
+                self.description_money
+                ,
+                self.value_money
+                ,
+                self.popup_money
+                ,
+                ft.IconButton(
+                    icon=ft.icons.CALENDAR_MONTH_OUTLINED,
+                    on_click=lambda _: self.calendario.pick_date(),
+                    tooltip="Selecionar data",
+                    icon_color=cor_teal
+                ),
+                ft.IconButton(icon=ft.icons.ADD,
+                              icon_color=ft.colors.TEAL,
+                              col=1,
+                              tooltip='Adicionar transação',
+                              on_click=self.functions.add_transaction),
+                ft.IconButton(icon=ft.icons.DELETE,
+                              icon_color=ft.colors.RED,
+                              col=1,
+                              tooltip='Deletar transação',
+                              on_click=self.functions.del_transaction)    
+                ],
+                spacing=10,
+                alignment=ft.MainAxisAlignment.CENTER
+            )
+        self.column_money= ft.Column(
+            expand=True,
+            col=6,
+            controls=[
+                self.row_money_insert,
+                self.tabs_money,
+            ],
+            alignment=ft.MainAxisAlignment.START,
+            horizontal_alignment=ft.CrossAxisAlignment.START
+        )
+
+
         #COMPONENTS USED IN TASKS
         self.data=ft.IconButton(
                     icon=ft.icons.CALENDAR_MONTH_OUTLINED,
@@ -140,6 +258,7 @@ class Components():
             indicator_color=ft.colors.AMBER,
             bgcolor=ft.colors.TEAL,
             shadow_color=ft.colors.BLACK,
+            on_change=self.functions.main_tabs_change
         )
 
         #ROWS
@@ -166,7 +285,7 @@ class Components():
         
         #COLUMNS
         self.column_tasks=ft.Column(
-            expand=True,
+            expand=False,
             col=6,
             controls=[
                 self.row_tasks_insert,
@@ -178,6 +297,17 @@ class Components():
         )
 
         #CONTAINERS
+        self.Container_money=ft.Container(
+        col=6,
+        content=self.column_money,
+        gradient=ft.LinearGradient(
+            begin=ft.alignment.top_center,
+            end=ft.alignment.bottom_center,
+            colors=[ft.colors.YELLOW,ft.colors.AMBER]
+            ),
+            padding=10
+        )
+        
         self.container_main=ft.Container(
             expand=True,
             content=self.column_tasks,
