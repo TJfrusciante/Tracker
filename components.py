@@ -67,25 +67,6 @@ class Components():
                     ],   
                 )
         
-        self.description_money=ft.TextField(
-                    text_style=black,
-                    value='',
-                    label='Descrição da transação',
-                    label_style=teal,
-                    on_change=self.functions.set_value_money,
-                    on_submit=self.functions.limpar_value_text_box_money
-                )
-        
-        self.value_money=ft.TextField(
-                    text_style=black,
-                    value='',
-                    label='Valor da transação',
-                    label_style=teal,
-                    width=100,
-                    on_change=self.functions.set_value_money_float,
-                    on_submit=self.functions.limpar_value_text_box_money
-                )
-        
         self.tabs_money = ft.Tabs(
             divider_color='teal',
             selected_index=2,
@@ -121,7 +102,7 @@ class Components():
                               icon_color=ft.colors.TEAL,
                               col=1,
                               tooltip='Adicionar transação',
-                              on_click=self.functions.add_transaction),
+                              on_click=self.functions.limpar_value_text_box_money),
                 ft.IconButton(icon=ft.icons.DELETE,
                               icon_color=ft.colors.RED,
                               col=1,
@@ -131,8 +112,10 @@ class Components():
                 spacing=10,
                 alignment=ft.MainAxisAlignment.CENTER
             )
+        
         self.column_money= ft.Column(
             expand=True,
+            scroll=ft.ScrollMode.AUTO,
             col=6,
             controls=[
                 self.row_money_insert,
@@ -173,27 +156,43 @@ class Components():
             confirm_text="Confirmar"
         )
 
-        #EDIT ALERT DIALOAG
+        #EDIT ALERT DIALOAG ELEMENTS WHICH I HAVE TO RETRIEVE DATA FROM
         self.text_field_edit=ft.TextField(label="Digite a nova descrição aqui",
-                                    value='',
-                                    on_change=self.functions.set_value,
-                                    on_submit=self.functions.save_task_edit,
-                                    text_style=black,
-                                    label_style=ft.TextStyle(color=cor_black),
+                                        col=2,
+                                        value='',
+                                        on_change=self.functions.set_value,
+                                        on_submit=self.functions.save_task_edit,
+                                        text_style=black,
+                                        label_style=ft.TextStyle(color=cor_black),
                                     )
-        self.calendario_alert_icon=ft.IconButton(
+        self.calendario_alert_icon=ft.TextButton(
+            text='Nova data',
             icon=ft.icons.CALENDAR_MONTH_OUTLINED,
             icon_color=cor_black,
+            style=ft.ButtonStyle(color={
+                                        ft.MaterialState.DEFAULT: cor_black,
+                                        ft.MaterialState.HOVERED: cor_amber
+                                    }),
+            col=1,
             tooltip="Selecionar data edição",
             on_click=lambda _: self.calendario.pick_date()
         )
-
-        self.edit_dialog = ft.AlertDialog(
+        self.value_edit_money=ft.TextField(label="Digite o novo valor aqui",
+                                           col=2,
+                                            value='',
+                                            on_change=self.functions.set_value,
+                                            on_submit=self.functions.save_task_edit,
+                                            text_style=black,
+                                            label_style=ft.TextStyle(color=cor_black),
+                                            )
+        #DEFINING THE EDITING POPUPS
+        self.edit_dialog_task = ft.AlertDialog(
             content=ft.Container(
                 content=ft.Column(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    height=200,
-                    width=300,
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                    height=300,
+                    width=400,
                     controls=[
                         self.text_field_edit,
                         self.calendario_alert_icon,
@@ -217,9 +216,53 @@ class Components():
                                     icon_color=cor_black)
                     ]
                 ),
-                bgcolor=ft.colors.TEAL,
+                bgcolor=cor_teal,
                 padding=20,
-                border_radius=10
+                border_radius=5
+            ),
+            actions=[
+            ],
+            visible=False,
+        )
+        self.edit_dialog_money = ft.AlertDialog(
+            content=ft.Container(
+                content=ft.Column(
+                    col=10,
+                    tight=True,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                    
+                    height=300,
+                    width=400,
+                    controls=[
+                        self.text_field_edit,
+                        self.value_edit_money,
+                        self.calendario_alert_icon,
+                        ft.TextButton("Salvar",
+                                      col=1,
+                                    on_click=self.functions.save_task_edit_money,
+                                    style=ft.ButtonStyle(color={
+                                        ft.MaterialState.DEFAULT: cor_black,
+                                        ft.MaterialState.HOVERED: cor_amber
+                                    }),
+                                    icon=ft.icons.SAVE_OUTLINED,
+                                    icon_color=cor_black,
+                                    ),
+
+                        ft.TextButton("Cancelar",
+                                    col=1,
+                                    on_click=self.functions.close_dialog_money,
+                                    style=ft.ButtonStyle(color={
+                                        ft.MaterialState.DEFAULT: cor_black,
+                                        ft.MaterialState.HOVERED: cor_amber
+                                    }),
+                                    icon=ft.icons.CANCEL_OUTLINED,
+                                    icon_color=cor_black)
+                    ]
+                ),
+                bgcolor=cor_teal,
+                padding=20,
+                border_radius=5
             ),
             actions=[
             ],
@@ -267,7 +310,7 @@ class Components():
             controls=[
                 self.description,
                 self.data,
-                ft.IconButton(icon=ft.icons.ADD,icon_color=ft.colors.TEAL,col=1,on_click=self.functions.add_tarefa),
+                ft.IconButton(icon=ft.icons.ADD,icon_color=ft.colors.TEAL,col=1,on_click=self.functions.limpar_value_text_box),
                 ft.IconButton(icon=ft.icons.DELETE,icon_color=ft.colors.RED,col=1,on_click=self.functions.del_tarefa)   
             ],
             alignment=ft.MainAxisAlignment.CENTER,
@@ -285,7 +328,8 @@ class Components():
         
         #COLUMNS
         self.column_tasks=ft.Column(
-            expand=False,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
             col=6,
             controls=[
                 self.row_tasks_insert,
@@ -303,13 +347,14 @@ class Components():
         gradient=ft.LinearGradient(
             begin=ft.alignment.top_center,
             end=ft.alignment.bottom_center,
-            colors=[ft.colors.YELLOW,ft.colors.AMBER]
+            colors=[ft.colors.AMBER,ft.colors.YELLOW]
             ),
             padding=10
         )
         
         self.container_main=ft.Container(
             expand=True,
+            col=6,
             content=self.column_tasks,
              gradient=ft.LinearGradient(
                 begin=ft.alignment.top_center,

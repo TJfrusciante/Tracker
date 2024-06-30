@@ -27,13 +27,14 @@ class Layout():
 
         #INTANCES OF OTHER CLASSES
         self.components=Components(self)
-
+        self.page.on_keyboard_event = self.components.functions.handle_key_event
         self.edit_data=''
         self.task = ''
         self.view = 'all'
 
         #ADDING THINGS TO THE OVERLAY
-        self.page.overlay.append(self.components.edit_dialog)
+        self.page.overlay.append(self.components.edit_dialog_task)
+        self.page.overlay.append(self.components.edit_dialog_money)
         self.page.overlay.append(self.components.calendario)
 
         #ADDING THINGS TO THE PAGE

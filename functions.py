@@ -3,6 +3,8 @@ import flet as ft
 from Tracker.database import Database
 from Tracker.flet_colors import Flet_colors
 
+from functools import wraps
+
 
 class Functions():
 
@@ -14,16 +16,30 @@ class Functions():
         self.data_base=Database()
         self.colors=Flet_colors()
         #INITIATING VARIABLES
-        self.edit_data=''
+        self.components.edit_data=''
+        self.components.edit_data_money=''
         self.task = ''
         
-        self.layout.page.on_keyboard_event = self.handle_key_event
-
         self.view = 'all'
         self.atualizar_tarefas()
         self.atualizar_money()
         
-    def check(self,e):
+    @staticmethod
+    def update_tasks_db(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            return  self.atualizar_tarefas(),func(self, *args, **kwargs), self.atualizar_tarefas()
+        return wrapper
+    
+    @staticmethod
+    def update_money_db(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            return self.atualizar_money(),func(self, *args, **kwargs), self.atualizar_money()
+            
+        return wrapper
+    
+    def check(self,e):#check the category of money transaction to add a new transaction
         e.control.checked= not e.control.checked
         self.text_money=e.control.text
         e.control.checked= not e.control.checked
@@ -31,42 +47,57 @@ class Functions():
     
     #ALERT DIALOAG METHODS
     def open_dialog(self, e):
-        self.edit_data=e.control.data
-        self.layout.edit_dialog.open = True
-        self.layout.edit_dialog.visible=True
+        self.components.edit_dialog_task.open = True
+        self.components.edit_dialog_task.visible=True
         self.layout.page.update()
+        self.components.edit_data=e.control.data
+        
 
     def close_dialog(self, e):
-        self.layout.edit_dialog.open= False
+        self.components.edit_dialog_task.open= False
+        self.layout.page.update()
+        
+
+    def open_dialog_money(self, e):
+        self.components.edit_dialog_money.open = True
+        self.components.edit_dialog_money.visible=True
+        self.layout.page.update()
+        self.components.edit_data_money=e.control.data
+        print(self.components.edit_data_money,'valor da transaction')
+
+    def close_dialog_money(self, e):
+        self.components.edit_dialog_money.open= False
         self.layout.page.update()
 
     #EVENT HANDLER WHEN KEYBOARD IS USED
     def handle_key_event(self, event):
-        # print(event.key,'tecla') Para saber como chamar a tecla pressionada
+        # print(event.key,'tecla') #Para saber como chamar a tecla pressionada
         if event.key == "Escape":
             self.close_dialog(event) 
 
         elif event.key =="Tab" and event.shift:
-            self.layout.nav_bar.selected_index = 1 if self.layout.container_main.content == self.layout.Container_money else 0
-            
-            self.layout.main_tabs_change((self.layout.nav_bar))
+            self.components.nav_bar.selected_index = 1 if self.components.container_main.content == self.components.Container_money else 0
+            self.main_tabs_change((self.components.nav_bar))
             
         elif event.key =="Delete":
-            self.del_tarefa(self.layout.row_tasks_insert.controls[3])#chamando com o icone de delete só pra padronizar
+            if self.components.nav_bar.selected_index==0:
+                self.del_transaction(self.components.row_money_insert.controls[5])
+            else:
+                self.del_tarefa(self.components.row_tasks_insert.controls[3])#chamando com o icone de delete só pra padronizar
 
     #MAIN TABS CHANGE METHOD
     def main_tabs_change(self,e):
-        print(e.control.selected_index)
         try:
-            if e.control.selected_index==0:
+            if self.components.nav_bar.selected_index==0:
                 self.components.container_main.content=self.components.Container_money
                 self.view='all_money'
-                print('all')
+    
             else:
                 self.components.container_main.content=self.components.column_tasks
                 self.view='all'
+            
         except:
-            if e.selected_index==0:
+            if self.components.nav_bar.selected_index==0:
                 self.components.container_main.content=self.components.Container_money
                 self.view='all_money'
             else:
@@ -80,6 +111,7 @@ class Functions():
     def money_containers(self):
         money_rows_containers=[]
         for transaction in self.data_base.transactions:
+            print(transaction)
             row_money= ft.Row(
                         tight=True,
                         scroll=ft.ScrollMode.AUTO ,
@@ -106,15 +138,16 @@ class Functions():
                             ft.IconButton(
                                 icon=ft.icons.EDIT,
                                 icon_color=self.colors.cor_teal,
-                                on_click=self.open_dialog,
+                                on_click=self.open_dialog_money,
                                 data=transaction[0]
                             )
                             ]
                             )
-            money_rows_containers.append(row_money)  
+            money_rows_containers.append(row_money) 
+            print(money_rows_containers) 
         return money_rows_containers
 
-
+    @update_money_db
     def checked_money(self, e):
         is_checked = e.control.value
         label = e.control.label
@@ -124,9 +157,7 @@ class Functions():
             self.data_base.manipular_db('UPDATE money SET selected = "ok" WHERE description = ?', parametros=[label])
         elif is_checked ==False :
             self.data_base.manipular_db('UPDATE money SET selected = "no" WHERE description = ?', parametros=[label])
-        
-        self.atualizar_money()
-        print(self.data_base.transactions,'status')
+            
         if self.view == 'all_money': #atualizando valores na lista de transações para atualiza-las quando terminar de excluir
             self.transactions = self.data_base.manipular_db('SELECT * FROM money')
         elif self.view=='positive':
@@ -135,34 +166,45 @@ class Functions():
             self.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value < 0')
 
     def atualizar_money(self):#METHOD TO UPDATE TRANSACTIONS
+        self.data_base.manipular_db(command='DELETE FROM money WHERE description = ?', parametros=['t'])
         try:
+            print('aqui0')
             try:
                 if self.components.column_money.controls[2]:
+                    print('aqqui')
                     self.components.column_money.controls = self.components.column_money.controls[:2]       
-
+                    print('aqqui2')
                     if self.view=='all_money' or self.view=="all":
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money')
-
+                        print('aqqui3')
                     elif self.view=='positive':
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value > 0;')
-                        
+                        print('aqqui4')
                     elif self.view=='negative':
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value < 0;')
-                    
-                    print(self.data_base.transactions,'transactions data base')
-                
+                        print('aqqui5')
                     money_rows=self.money_containers()
+                    print('aqqui6')
                     self.components.column_money.controls.extend(money_rows)
+                    print('aqqui7')
                     self.components.column_money.update()   
+                    print('aqqui8')
                     self.components.Container_money.update() 
+                    print('aqqui9')
             except:
+                print('aqui00')
                 money_rows=self.money_containers()
+                print('aqqui10')
                 self.components.column_money.controls.extend(money_rows)
+                print('aqqui11')
                 self.components.column_money.update()   
+                print('aqqui12')
                 self.components.Container_money.update() 
+                print('aqqui13')
         except:
             print('exception ao atualizar money')
 
+    @update_money_db
     def add_transaction(self,e):
         value_money=(self.components.value_money.data)
         value_money=int(value_money)
@@ -176,20 +218,34 @@ class Functions():
 
         if description:
             self.data_base.manipular_db(command='INSERT INTO money VALUES(?,?,?,?,?)', parametros=[description,data,value_money,selected,category])
-        self.data_base.update_variables()
-        self.atualizar_money()
-
-    def del_transaction(self,e):
-        self.data_base.update_variables()
+        
+    @update_money_db
+    def del_transaction(self,e):#in te tasks money, the column that tells if the checkbox is selected is index number 3
         check_list=self.data_base.transactions
-
-        print(check_list,'checklist')
         for item in check_list:
-            print(item[3])
             if item[3]=='ok':
                 self.data_base.manipular_db(command='DELETE FROM money WHERE description = ?', parametros=[item[0]])
 
-        self.atualizar_money()
+    @update_money_db
+    def save_task_edit_money(self, e):
+        new_transaction_name = self.components.text_field_edit.value
+        print(new_transaction_name,'name money')
+        new_transaction_value= int(self.components.value_edit_money.value)
+        print(new_transaction_value,'value money')
+        new_money_date=str(self.components.calendario.value)[0:10]
+        print(new_money_date,'date money')
+        data_separada=new_money_date.split('-')
+        new_money_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+        print(new_money_date,'data separada')
+        print(self.components.edit_data_money,'variavél que guarda o nome da transaction a ser editada')
+        self.data_base.manipular_db('UPDATE money SET description = ? WHERE description = ?', parametros=[new_transaction_name, self.components.edit_data_money])
+        self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, new_transaction_name])
+        self.data_base.manipular_db('UPDATE money SET date = ? WHERE description = ?', parametros=[new_money_date, new_transaction_name])
+        self.components.edit_data_money=new_transaction_name
+        print(self.components.edit_data_money, 'novo nome da transaction')
+        self.components.text_field_edit.value=''
+        print(self.components.text_field_edit.value,'limpando valor do input do nome')
+        self.close_dialog_money(self.components.edit_dialog_money)
 
     def return_checkbox_for_del_money(self):
         return [ft.Checkbox(
@@ -267,6 +323,7 @@ class Functions():
         except:
             print('exception ao atualizar tarefas')
 
+    @update_tasks_db
     def add_tarefa(self,e):#ADDING TASK
         status='no'
         name=self.set_value(self.components.row_tasks_insert)
@@ -278,34 +335,39 @@ class Functions():
         
         if name:
             self.data_base.manipular_db(command='INSERT INTO tasks VALUES(?,?,?,?)', parametros=[name,data,status,done])
-
-        self.atualizar_tarefas()
-
-    def del_tarefa(self,e):
-
-        check_list=self.return_checkeds_for_del()
-    
+        self.components.description.value=''
+        self.components.row_tasks_insert.update()
+        
+    @update_tasks_db
+    def del_tarefa(self,e):#in te tasks table, the column that tells if the checkbox is selected is index number 2
+        check_list=self.data_base.results
         for item in check_list:
-            if item.value==True:
-                self.data_base.manipular_db(command='DELETE FROM tasks WHERE name = ?', parametros=[item.label])
+            if item[2]=='ok':
+                self.data_base.manipular_db(command='DELETE FROM tasks WHERE name = ?', parametros=[item[0]])
 
-        self.atualizar_tarefas()
-
+    @update_tasks_db
     def save_task_edit(self, e):
-        new_task_name = self.layout.text_field_edit.value
+        new_task_name = self.components.text_field_edit.value
+        print(new_task_name,'nome novo retirado do alertdialog')
+        print('nome antigo da task',self.components.edit_data, 'nome antigo da task')
 
-        new_task_date=str(self.layout.calendario.value)[0:10]
+        new_task_date=str(self.components.calendario.value)[0:10]
         data_separada=new_task_date.split('-')
         new_task_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+        print(new_task_date,'data nova retirada do alertdialog')
+        self.data_base.manipular_db(command='UPDATE tasks SET name = ? WHERE name = ?', parametros=[new_task_name, self.components.edit_data])
+        print('atualizou o nome')
+        self.data_base.manipular_db(command='UPDATE tasks SET date = ? WHERE name = ?', parametros=[new_task_date, new_task_name])
+        print('atualizou a data')
+        self.components.edit_data=new_task_name
+        print(self.components.edit_data, 'novo nome da task')
+        self.components.text_field_edit.value=''
+        print(self.components.text_field_edit.value,'limpando valor do input do nome')
+        print('atualizando componente do alert')
+        self.close_dialog(self.components.edit_dialog_task)
+        print('fechando alert')#copiar esse tipo de edição no caso do money, adicionando a edição de categoria
+        
 
-        self.data_base.manipular_db('UPDATE tasks SET name = ? WHERE name = ?', parametros=[new_task_name, self.edit_data])
-        self.data_base.manipular_db('UPDATE tasks SET date = ? WHERE name = ?', parametros=[new_task_date, new_task_name])
-        self.edit_data=new_task_name
-        self.layout.text_field_edit.value=''
-        self.layout.edit_dialog.update()
-        self.atualizar_tarefas()
-        self.close_dialog
-    
     def limpar_value_text_box(self,e):
         try:
             self.add_tarefa(e=e)
@@ -331,6 +393,7 @@ class Functions():
         
         self.atualizar_tarefas()
 
+    @update_tasks_db
     def checked(self, e):
         is_checked = e.control.value
         label = e.control.label
@@ -339,9 +402,7 @@ class Functions():
             self.data_base.manipular_db('UPDATE tasks SET selected = "ok" WHERE name = ?', parametros=[label])
         elif is_checked ==False :
             self.data_base.manipular_db('UPDATE tasks SET selected = "no" WHERE name = ?', parametros=[label])
-
-        self.atualizar_tarefas()
-        print(self.data_base.results)
+            
         if self.view == 'all':
             self.data_base.results = self.data_base.manipular_db('SELECT * FROM tasks')
         else:

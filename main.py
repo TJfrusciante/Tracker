@@ -1,7 +1,6 @@
 import flet as ft
 import datetime
 
-from Tracker.database import Database
 from Tracker.layout  import Layout
 
 class Tracker():
