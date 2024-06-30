@@ -1,0 +1,7 @@
+In this commit the main updates were:
+
+- Now you can edit any task you've created.
+- Now you can edit any transaction you've created.
+- Now you can change between the task and transaction screen by using the hotkey "shift+tab".
+- Now if you click the "add" button in both tasks and transactions it will "reset" the description/name input after adding.
+- Now if you click the "del" button in both tasks and transactions it will delete the selected transactions/tasks.
