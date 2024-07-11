@@ -231,41 +231,48 @@ class Functions():
     #METHOD THAT AFFECTS THE MONEY
     def money_containers(self):
         money_rows_containers=[]
-        for transaction in self.data_base.transactions:
-            row_money= ft.Row(
-                        width=5000,#TO MAKE SURE THE ROW IS AS LARGE AS THE SCREEN CAN BE, I COULDN'T FIND ANOTHER TO DO THIS, WHEN I SET EXPAND TO TRUE THE HEIGHT WAS AFFECTED AS WELL
-                        tight=True,
-                        scroll=ft.ScrollMode.AUTO ,
-                        spacing=5,
-                        controls=[
-                            ft.Checkbox(
-                                adaptive=True,
-                                check_color=self.colors.cor_black,
-                                hover_color=self.colors.cor_teal,
-                                active_color=self.colors.cor_orange,
-                                focus_color=self.colors.cor_black,
-                                label=f"{transaction[0]}, {transaction[2]} reais,",
-                                label_style=self.colors.text_green if transaction[2]>0 else self.colors.text_red,
-                                label_position=ft.LabelPosition.RIGHT,
-                                tooltip="Selecionar lançamento",
-                                on_change=self.checked_money,
-                                value=True if transaction[3]=='ok' else False
-                            ),
-                            ft.Text(
-                                weight=ft.FontWeight.BOLD,
-                                color=self.colors.cor_green if transaction[2]>0 else self.colors.cor_red,
-                                value=f"lançamento dia: {transaction[1]}, Categoria {transaction[4]}."
-                            ),
-                            ft.IconButton(
-                                icon=ft.icons.EDIT,
-                                icon_color=self.colors.cor_teal,
-                                on_click=self.open_dialog_money,
-                                data=transaction[0]
-                            )
-                            ]
-                            )
-            money_rows_containers.append(row_money) 
-        return money_rows_containers
+        if self.data_base.transactions!=[]:
+            for transaction in self.data_base.transactions:
+                row_money= ft.Row(
+                            width=5000,#TO MAKE SURE THE ROW IS AS LARGE AS THE SCREEN CAN BE, I COULDN'T FIND ANOTHER TO DO THIS, WHEN I SET EXPAND TO TRUE THE HEIGHT WAS AFFECTED AS WELL
+                            tight=True,
+                            scroll=ft.ScrollMode.AUTO ,
+                            spacing=5,
+                            controls=[
+                                ft.Checkbox(
+                                    adaptive=True,
+                                    check_color=self.colors.cor_black,
+                                    hover_color=self.colors.cor_teal,
+                                    active_color=self.colors.cor_orange,
+                                    focus_color=self.colors.cor_black,
+                                    label=f"{transaction[0]}, {transaction[2]} reais,",
+                                    label_style=self.colors.text_green if transaction[2]>0 else self.colors.text_red,
+                                    label_position=ft.LabelPosition.RIGHT,
+                                    tooltip="Selecionar lançamento",
+                                    on_change=self.checked_money,
+                                    value=True if transaction[3]=='ok' else False
+                                ),
+                                ft.Text(
+                                    weight=ft.FontWeight.BOLD,
+                                    color=self.colors.cor_green if transaction[2]>0 else self.colors.cor_red,
+                                    value=f"lançamento dia: {transaction[1]}, Categoria {transaction[4]}."
+                                ),
+                                ft.IconButton(
+                                    icon=ft.icons.EDIT,
+                                    icon_color=self.colors.cor_teal,
+                                    on_click=self.open_dialog_money,
+                                    data=transaction[0]
+                                )
+                                ]
+                                )
+                money_rows_containers.append(row_money) 
+            return money_rows_containers
+        else:
+            return [ft.Row(
+                controls=[
+                    ft.Text(value='Não há transações nesta categoria!', color=self.colors.cor_black, style=self.colors.text_black)
+                ]
+            )]
 
     @update_money_db
     def checked_money(self, e):
