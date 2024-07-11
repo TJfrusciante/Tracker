@@ -24,10 +24,8 @@ class Layout():
                 )
             )
         
-
         #INTANCES OF OTHER CLASSES
         self.components=Components(self)
-        self.page.on_keyboard_event = self.components.functions.handle_key_event
         self.edit_data=''
         self.task = ''
         self.view = 'all'
@@ -36,9 +34,13 @@ class Layout():
         self.page.overlay.append(self.components.edit_dialog_task)
         self.page.overlay.append(self.components.edit_dialog_money)
         self.page.overlay.append(self.components.calendario)
+        self.page.overlay.append(self.components.edit_categories)
+        self.page.overlay.append(self.components.chart_creating_popup)
+        self.page.overlay.append(self.components.chart_image_popup)
 
         #ADDING THINGS TO THE PAGE
         self.page.add(self.components.layout)
+        self.page.on_keyboard_event = self.components.functions.handle_key_event
         self.update_page()
 
     def add_to_page(self, item_to_add):

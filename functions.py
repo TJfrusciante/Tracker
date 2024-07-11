@@ -1,4 +1,10 @@
+from multiprocessing import Value
+from tkinter.font import BOLD
+from turtle import bgcolor
 import flet as ft
+import matplotlib.pyplot as plt
+import io
+from PIL import Image
 
 from Tracker.database import Database
 from Tracker.flet_colors import Flet_colors
@@ -21,30 +27,132 @@ class Functions():
         self.task = ''
         
         self.view = 'all'
-        self.atualizar_tarefas()
+        
         self.atualizar_money()
+        self.atualizar_tarefas()
+        
         
     @staticmethod
     def update_tasks_db(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            return  self.atualizar_tarefas(),func(self, *args, **kwargs), self.atualizar_tarefas()
+            return  func(self, *args, **kwargs), self.atualizar_tarefas()
         return wrapper
     
     @staticmethod
     def update_money_db(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            return self.atualizar_money(),func(self, *args, **kwargs), self.atualizar_money()
-            
+            return func(self, *args, **kwargs),self.atualizar_money()
         return wrapper
     
     def check(self,e):#check the category of money transaction to add a new transaction
         e.control.checked= not e.control.checked
         self.text_money=e.control.text
-        e.control.checked= not e.control.checked
         e.control.update()
     
+
+    #CHARTS CREATION METHODS
+    def open_charts_creation(self, e):
+        self.components.chart_creating_popup.open = True
+        self.components.chart_creating_popup.visible=True
+        self.layout.page.update()
+
+    def close_charts_creation(self, e):
+        self.components.chart_creating_popup.open = False
+        self.layout.page.update()
+
+    def sum_values_for_the_chart(self):
+        self.category_value_date=self.data_base.manipular_db('SELECT category, value, date FROM money')
+        
+        self.dict_categories_values=dict()
+    
+        self.date_to_chart=f'{self.components.month_picker.value.split('-')[0]}/{self.components.year_picker.value}'
+        
+        for x in self.category_value_date:
+            self.dict_categories_values[x[0]]=[]#initializing dict keys for each category
+
+        for x in self.category_value_date:
+            print(x[2][3:],'data da lista')
+            if x[2][3:]==self.date_to_chart:
+                self.dict_categories_values[x[0]].append(x[1])#appending values to it's corresponding category key
+            else:
+                print(f'{x} esta data não esta no intervalo selecinado')
+        self.categorias_list=[]
+        self.valores_list=[]
+        for key in self.dict_categories_values.keys():
+            self.categorias_list.append(key)
+            self.valores_list.append(sum(self.dict_categories_values[key]))
+            # print(f'O resultado na categoria {key} em {self.date_to_chart} foi de: {sum(self.dict_categories_values[key])} reais.')
+        print(self.categorias_list,'categorias')
+        print(self.valores_list,'valores')
+        
+    def create_chart(self, e):
+        self.sum_values_for_the_chart()
+        my_colors = ['#FFBF00','#008000','#FF0000','#A020F0','#ffa500','#e94196']
+        bars = plt.bar(
+            self.categorias_list,
+            self.valores_list,
+            width=0.4
+            
+        )
+        for bar in range(len(bars)):
+            bars[bar].set_color(my_colors[bar])
+            yval = bars[bar].get_height()
+            if yval>0:
+                cor='#008000'
+                plt.text(bars[bar].get_x()+0.05, yval + 10, yval, color=cor)
+            else:
+                cor='#FF0000'
+                plt.text(bars[bar].get_x()+0.05, 0 + 10, yval, color=cor)
+
+        plt.title(f'Resumo do mês de {self.date_to_chart}')
+        plt.show()
+    #CATEGORY EDITING SCREEN METHODS
+    def update_existent_categories(self):
+        self.components.existent_categories.controls=[ft.Text(value='Categorias atuais:',color=self.colors.cor_black, weight=ft.FontWeight.BOLD)]
+        for category in self.data_base.categories:
+            self.components.existent_categories.controls.append(ft.Text(value=f' {category[0]}',color=self.colors.cor_amber, weight=ft.FontWeight.BOLD))
+        
+    def open_edit_categories(self, e):
+        self.update_categories()
+        self.components.edit_categories.open = True
+        self.components.edit_categories.visible=True
+        self.update_existent_categories()
+        self.layout.page.update()
+
+    def close_edit_categories(self, e):
+        self.components.edit_categories.open = False
+        self.layout.page.update()
+
+    def add_category(self, e):
+        self.data_base.manipular_db(command='INSERT INTO categories (category) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM categories WHERE category = ?)',
+        parametros=[self.components.text_field_edit_category.value, self.components.text_field_edit_category.value])
+        self.components.text_field_edit_category.value=''
+        self.close_edit_categories(self.components.edit_categories)
+        self.update_categories()
+        self.layout.page.update()
+    
+    def del_category(self, e):
+        self.data_base.manipular_db(command='DELETE FROM categories WHERE category = ?',parametros=[self.components.text_field_edit_category.value])
+        self.components.text_field_edit_category.value=''
+        self.close_edit_categories(self.components.edit_categories)
+        self.update_categories()
+        self.layout.page.update()
+        
+    def update_categories(self):
+        self.data_base.categories=self.data_base.manipular_db('SELECT category FROM categories')
+        categories_list=[]
+        for item in self.data_base.categories:
+            categorie=ft.PopupMenuItem(
+                text=item[0],
+                checked=False,
+                on_click=self.check,
+            )
+            categories_list.append(categorie)
+
+        self.components.popup_money.items= categories_list
+
     #ALERT DIALOAG METHODS
     def open_dialog(self, e):
         self.components.edit_dialog_task.open = True
@@ -52,18 +160,15 @@ class Functions():
         self.layout.page.update()
         self.components.edit_data=e.control.data
         
-
     def close_dialog(self, e):
         self.components.edit_dialog_task.open= False
         self.layout.page.update()
-        
 
     def open_dialog_money(self, e):
         self.components.edit_dialog_money.open = True
         self.components.edit_dialog_money.visible=True
         self.layout.page.update()
         self.components.edit_data_money=e.control.data
-        print(self.components.edit_data_money,'valor da transaction')
 
     def close_dialog_money(self, e):
         self.components.edit_dialog_money.open= False
@@ -76,7 +181,7 @@ class Functions():
             self.close_dialog(event) 
 
         elif event.key =="Tab" and event.shift:
-            self.components.nav_bar.selected_index = 1 if self.components.container_main.content == self.components.Container_money else 0
+            self.components.nav_bar.selected_index = 1 if self.components.header.content == self.components.Container_money else 0
             self.main_tabs_change((self.components.nav_bar))
             
         elif event.key =="Delete":
@@ -85,34 +190,50 @@ class Functions():
             else:
                 self.del_tarefa(self.components.row_tasks_insert.controls[3])#chamando com o icone de delete só pra padronizar
 
+        if event.key == "Numpad Add":
+            if self.components.nav_bar.selected_index==0:
+                self.layout.page.update()
+                self.layout.components.functions.limpar_value_text_box_money(self.components.row_money_insert.controls[4])
+            else:
+                self.add_tarefa(self.components.row_tasks_insert.controls[2])#chamando com o icone de delete só pra padronizar
+
     #MAIN TABS CHANGE METHOD
     def main_tabs_change(self,e):
         try:
             if self.components.nav_bar.selected_index==0:
-                self.components.container_main.content=self.components.Container_money
                 self.view='all_money'
+        
+                self.components.header.content=self.components.Container_money
+                self.atualizar_money()
+                self.update_categories()
     
             else:
-                self.components.container_main.content=self.components.column_tasks
+        
+                self.components.header.content=self.components.column_tasks
                 self.view='all'
+                self.atualizar_tarefas()
             
         except:
             if self.components.nav_bar.selected_index==0:
-                self.components.container_main.content=self.components.Container_money
                 self.view='all_money'
+                self.atualizar_money()
+                self.update_categories()
+    
             else:
-                self.components.container_main.content=self.components.column_tasks
+        
+                self.components.header.content=self.components.column_tasks
                 self.view='all'
+                self.atualizar_tarefas()
 
         self.components.nav_bar.update()
-        self.components.container_main.update()
+        self.components.layout.update()
 
     #METHOD THAT AFFECTS THE MONEY
     def money_containers(self):
         money_rows_containers=[]
         for transaction in self.data_base.transactions:
-            print(transaction)
             row_money= ft.Row(
+                        width=5000,#TO MAKE SURE THE ROW IS AS LARGE AS THE SCREEN CAN BE, I COULDN'T FIND ANOTHER TO DO THIS, WHEN I SET EXPAND TO TRUE THE HEIGHT WAS AFFECTED AS WELL
                         tight=True,
                         scroll=ft.ScrollMode.AUTO ,
                         spacing=5,
@@ -144,7 +265,6 @@ class Functions():
                             ]
                             )
             money_rows_containers.append(row_money) 
-            print(money_rows_containers) 
         return money_rows_containers
 
     @update_money_db
@@ -165,53 +285,46 @@ class Functions():
         elif self.view=='negative':
             self.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value < 0')
 
+    
     def atualizar_money(self):#METHOD TO UPDATE TRANSACTIONS
         self.data_base.manipular_db(command='DELETE FROM money WHERE description = ?', parametros=['t'])
         try:
-            print('aqui0')
             try:
-                if self.components.column_money.controls[2]:
-                    print('aqqui')
-                    self.components.column_money.controls = self.components.column_money.controls[:2]       
-                    print('aqqui2')
+                if self.components.body_container.controls[0]:
+                    self.components.body_container.controls = []  
                     if self.view=='all_money' or self.view=="all":
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money')
-                        print('aqqui3')
+        
                     elif self.view=='positive':
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value > 0;')
-                        print('aqqui4')
+        
                     elif self.view=='negative':
                         self.data_base.transactions = self.data_base.manipular_db('SELECT * FROM money WHERE value < 0;')
-                        print('aqqui5')
-                    money_rows=self.money_containers()
-                    print('aqqui6')
-                    self.components.column_money.controls.extend(money_rows)
-                    print('aqqui7')
-                    self.components.column_money.update()   
-                    print('aqqui8')
-                    self.components.Container_money.update() 
-                    print('aqqui9')
+                     
+    
             except:
-                print('aqui00')
-                money_rows=self.money_containers()
-                print('aqqui10')
-                self.components.column_money.controls.extend(money_rows)
-                print('aqqui11')
-                self.components.column_money.update()   
-                print('aqqui12')
-                self.components.Container_money.update() 
-                print('aqqui13')
+                print('exception ao atualizar money 1')
+            money_rows=self.money_containers()
+            self.components.body_container.controls.extend(money_rows)
+            self.components.body_container.update()   
+            self.components.header.update()
+            self.components.layout.update()
         except:
-            print('exception ao atualizar money')
+            print('exception ao atualizar money 2')
 
     @update_money_db
     def add_transaction(self,e):
+        
+        for menu_item in self.components.popup_money.items:
+            if menu_item.checked==True:
+                category=menu_item.text
         value_money=(self.components.value_money.data)
-        value_money=int(value_money)
+        value_money=value_money.replace(',','.')
+        value_money=float(value_money)
 
         selected='no'
         description=self.set_value_money(self.components.row_money_insert)
-        category=self.text_money
+        # category=self.text_money
         date=str(self.components.calendario.value)[0:10]
         data_separada=date.split('-')
         data=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
@@ -227,24 +340,40 @@ class Functions():
                 self.data_base.manipular_db(command='DELETE FROM money WHERE description = ?', parametros=[item[0]])
 
     @update_money_db
-    def save_task_edit_money(self, e):
+    def save_transaction_edit_money(self, e):
         new_transaction_name = self.components.text_field_edit.value
-        print(new_transaction_name,'name money')
-        new_transaction_value= int(self.components.value_edit_money.value)
-        print(new_transaction_value,'value money')
-        new_money_date=str(self.components.calendario.value)[0:10]
-        print(new_money_date,'date money')
-        data_separada=new_money_date.split('-')
-        new_money_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
-        print(new_money_date,'data separada')
-        print(self.components.edit_data_money,'variavél que guarda o nome da transaction a ser editada')
-        self.data_base.manipular_db('UPDATE money SET description = ? WHERE description = ?', parametros=[new_transaction_name, self.components.edit_data_money])
-        self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, new_transaction_name])
-        self.data_base.manipular_db('UPDATE money SET date = ? WHERE description = ?', parametros=[new_money_date, new_transaction_name])
-        self.components.edit_data_money=new_transaction_name
-        print(self.components.edit_data_money, 'novo nome da transaction')
+
+        if new_transaction_name != '':
+            self.data_base.manipular_db('UPDATE money SET description = ? WHERE description = ?', parametros=[new_transaction_name, self.components.edit_data_money])
+            if self.components.value_edit_money.value!='':#HAD TO TREAT THIS CAUSE THE '' VALUE CANNOT BE CONVERTED TO INT
+                new_transaction_value= int(self.components.value_edit_money.value)
+                self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, new_transaction_name])
+            if self.components.calendario.value !=None:
+                new_money_date=str(self.components.calendario.value)[0:10]
+                data_separada=new_money_date.split('-')
+                new_money_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+                self.data_base.manipular_db('UPDATE money SET date = ? WHERE description = ?', parametros=[new_money_date, new_transaction_name])
+            if self.components.category_edit_money.value!= '':
+                self.data_base.manipular_db('UPDATE money SET category = ? WHERE description = ?', parametros=[self.components.category_edit_money.value, new_transaction_name])
+            self.components.edit_data_money=new_transaction_name
+        else:
+            if self.components.value_edit_money.value!='':#HAD TO TREAT THIS CAUSE THE '' VALUE CANNOT BE CONVERTED TO INT
+                new_transaction_value= int(self.components.value_edit_money.value)
+                self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, self.components.edit_data_money])
+            if self.components.calendario.value !=None:
+                new_money_date=str(self.components.calendario.value)[0:10]
+                data_separada=new_money_date.split('-')
+                new_money_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+                self.data_base.manipular_db('UPDATE money SET date = ? WHERE description = ?', parametros=[new_money_date, self.components.edit_data_money])
+            if self.components.category_edit_money.value!= '':
+                self.data_base.manipular_db('UPDATE money SET category = ? WHERE description = ?', parametros=[self.components.category_edit_money.value, self.components.edit_data_money])
+        
+        #RESETING ALL COMPONENTS VALUE SO WHEN YOU OPEN THE EDIT SCREEN AGAIN ALL FIELDS ARE EMPTY, WAITING FOR NEW INPUTS FROM THE USER
         self.components.text_field_edit.value=''
-        print(self.components.text_field_edit.value,'limpando valor do input do nome')
+        self.components.value_edit_money.value=''
+        self.components.category_edit_money.value=''
+        self.components.calendario.value=None
+
         self.close_dialog_money(self.components.edit_dialog_money)
 
     def return_checkbox_for_del_money(self):
@@ -258,7 +387,7 @@ class Functions():
                         label_position=ft.LabelPosition.RIGHT,
                         on_change=self.checked,
                         value=True if transacao[3]=='ok' else False
-                    ) for transacao in self.data_base.transactions]
+                        ) for transacao in self.data_base.transactions]
     
     def limpar_value_text_box_money(self,e):
         try:
@@ -303,25 +432,21 @@ class Functions():
     def atualizar_tarefas(self):#METHOD TO UPDATE TASKS
         try:
             try:
-                if self.components.column_tasks.controls[2]:
-                    self.components.column_tasks.controls = self.components.column_tasks.controls[:2]     
-
+                if self.components.body_container.controls[0]:
+                    self.components.body_container.controls.clear()  
                     if self.view=='all':
                         self.data_base.results = self.data_base.manipular_db('SELECT * FROM tasks')
                     elif self.view=='done':
                         self.data_base.results = self.data_base.manipular_db('SELECT * FROM tasks WHERE status = "done"')
                     elif self.view=='ongoing':
                         self.data_base.results = self.data_base.manipular_db('SELECT * FROM tasks WHERE status = "ongoing"')
-
-                    task_rows = self.task_containers()
-                    self.components.column_tasks.controls.extend(task_rows)
-                    self.components.column_tasks.update()
             except:
-                task_rows = self.task_containers()
-                self.components.column_tasks.controls.extend(task_rows)
-                self.components.column_tasks.update()
+                print('exception ao atualizar tarefas 1 ')
+            task_rows = self.task_containers()
+            self.components.body_container.controls.extend(task_rows)
+            self.components.body_container.update()    
         except:
-            print('exception ao atualizar tarefas')
+            print('exception ao atualizar tarefas 2 ')
 
     @update_tasks_db
     def add_tarefa(self,e):#ADDING TASK
@@ -347,27 +472,27 @@ class Functions():
 
     @update_tasks_db
     def save_task_edit(self, e):
-        new_task_name = self.components.text_field_edit.value
-        print(new_task_name,'nome novo retirado do alertdialog')
-        print('nome antigo da task',self.components.edit_data, 'nome antigo da task')
+        new_task_name = self.components.text_field_edit_task.value
 
-        new_task_date=str(self.components.calendario.value)[0:10]
-        data_separada=new_task_date.split('-')
-        new_task_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
-        print(new_task_date,'data nova retirada do alertdialog')
-        self.data_base.manipular_db(command='UPDATE tasks SET name = ? WHERE name = ?', parametros=[new_task_name, self.components.edit_data])
-        print('atualizou o nome')
-        self.data_base.manipular_db(command='UPDATE tasks SET date = ? WHERE name = ?', parametros=[new_task_date, new_task_name])
-        print('atualizou a data')
-        self.components.edit_data=new_task_name
-        print(self.components.edit_data, 'novo nome da task')
-        self.components.text_field_edit.value=''
-        print(self.components.text_field_edit.value,'limpando valor do input do nome')
-        print('atualizando componente do alert')
+        if new_task_name != '':
+            self.data_base.manipular_db(command='UPDATE tasks SET name = ? WHERE name = ?', parametros=[new_task_name, self.components.edit_data])
+            if self.components.calendario.value != None:
+                new_task_date=str(self.components.calendario.value)[0:10]
+                data_separada=new_task_date.split('-')
+                new_task_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+                self.data_base.manipular_db(command='UPDATE tasks SET date = ? WHERE name = ?', parametros=[new_task_date, new_task_name])
+            self.components.text_field_edit_task.value=''
+            self.components.edit_dialog_task.update()
+            self.components.edit_data=new_task_name                
+        else:
+            if self.components.calendario.value != None:
+                new_task_date=str(self.components.calendario.value)[0:10]
+                data_separada=new_task_date.split('-')
+                new_task_date=data_separada[2]+'/'+data_separada[1]+'/'+data_separada[0]
+                self.data_base.manipular_db(command='UPDATE tasks SET date = ? WHERE name = ?', parametros=[new_task_date, self.components.edit_data]) 
+                
         self.close_dialog(self.components.edit_dialog_task)
-        print('fechando alert')#copiar esse tipo de edição no caso do money, adicionando a edição de categoria
         
-
     def limpar_value_text_box(self,e):
         try:
             self.add_tarefa(e=e)
@@ -442,54 +567,58 @@ class Functions():
     
     def task_containers(self):
         containers = []
-        for resultado in self.data_base.results:
-            row= ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_AROUND,
-                        tight=True,
-                        scroll=ft.ScrollMode.AUTO,
-                        spacing=5,
-                        controls=[
-                            ft.Checkbox(
-                                check_color=self.colors.cor_black,
-                                hover_color=self.colors.cor_teal,
-                                active_color=self.colors.cor_orange,
-                                focus_color=self.colors.cor_black,
-                                label=resultado[0],
-                                label_style=self.colors.text_green if resultado[3] == "done" else self.colors.text_red,# type: ignore
-                                label_position=ft.LabelPosition.RIGHT,
-                                tooltip="Selecionar tarefa",
-                                on_change=self.checked,
-                                value=resultado[2] == 'ok'
-                            ),
-                            ft.Text(
-                                weight=ft.FontWeight.BOLD,
-                                color=self.colors.cor_green if resultado[3] == "done" else self.colors.cor_red,
-                                value=' até ' + resultado[1]
-                            ),
-                            ft.IconButton(
-                                icon=ft.icons.EDIT,
-                                icon_color=self.colors.cor_teal,
-                                on_click=self.open_dialog,
-                                data=resultado[0]
-                            ),
-                            ft.Checkbox(
-                                check_color=self.colors.cor_white,
-                                hover_color=self.colors.cor_teal,
-                                active_color=self.colors.cor_teal,
-                                label=resultado[0],
-                                label_position=ft.LabelPosition.RIGHT,
-                                label_style=self.colors.text_invisible_label_style,
-                                tooltip="Status da tarefa",
-                                on_change=self.done,
-                                value=resultado[3] == 'done'
+        if self.data_base.results!= []:
+            for resultado in self.data_base.results:
+                row= ft.Row(
+                            width=5000,#TO MAKE SURE THE ROW IS AS LARGE AS THE SCREEN CAN BE, I COULDN'T FIND ANOTHER TO DO THIS, WHEN I SET EXPAND TO TRUE THE HEIGHT WAS AFFECTED AS WELL
+                            alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                            tight=True,
+                            scroll=ft.ScrollMode.AUTO,
+                            spacing=5,
+                            controls=[
+                                ft.Checkbox(
+                                    check_color=self.colors.cor_black,
+                                    hover_color=self.colors.cor_teal,
+                                    active_color=self.colors.cor_orange,
+                                    focus_color=self.colors.cor_black,
+                                    label=resultado[0],
+                                    label_style=self.colors.text_green if resultado[3] == "done" else self.colors.text_red,# type: ignore
+                                    label_position=ft.LabelPosition.RIGHT,
+                                    tooltip="Selecionar tarefa",
+                                    on_change=self.checked,
+                                    value=resultado[2] == 'ok'
+                                ),
+                                ft.Text(
+                                    weight=ft.FontWeight.BOLD,
+                                    color=self.colors.cor_green if resultado[3] == "done" else self.colors.cor_red,
+                                    value=' até ' + resultado[1]
+                                ),
+                                ft.IconButton(
+                                    icon=ft.icons.EDIT,
+                                    icon_color=self.colors.cor_teal,
+                                    on_click=self.open_dialog,
+                                    data=resultado[0]
+                                ),
+                                ft.Checkbox(
+                                    check_color=self.colors.cor_white,
+                                    hover_color=self.colors.cor_teal,
+                                    active_color=self.colors.cor_teal,
+                                    label=resultado[0],
+                                    label_position=ft.LabelPosition.RIGHT,
+                                    label_style=self.colors.text_invisible_label_style,
+                                    tooltip="Status da tarefa",
+                                    on_change=self.done,
+                                    value=resultado[3] == 'done'
+                                )
+                            ]
                             )
-                        ]
-                        )
+            
+                containers.append(row)
+            return containers
         
-            containers.append(row)
-        return containers
-
-                
-
-    def teste(self,e):
-        print('testando chamar functions usando POO')
+        else:
+            return [ft.Row(
+                controls=[
+                    ft.Text(value='Não há tarefas nesta categoria!', color=self.colors.cor_black, style=self.colors.text_black)
+                ]
+            )]
