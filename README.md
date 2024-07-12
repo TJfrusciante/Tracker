@@ -7,4 +7,5 @@ You can check a few images of it's "1.0" version below:
 
 ![image](https://github.com/TJfrusciante/Tracker/assets/109312060/4e7825c8-4dc4-4823-9b9d-93b2d54b53d6)
 
-![image](https://github.com/TJfrusciante/Tracker/assets/109312060/06471a4d-243c-433c-8507-a38deb35d6a5)
+![image](https://github.com/user-attachments/assets/27a0bf69-bb0b-4a03-8828-cf73bd78aca1)
+
