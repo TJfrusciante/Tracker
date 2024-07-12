@@ -76,7 +76,6 @@ class Functions():
             self.dict_categories_values[x[0]]=[]#initializing dict keys for each category
 
         for x in self.category_value_date:
-            print(x[2][3:],'data da lista')
             if x[2][3:]==self.date_to_chart:
                 self.dict_categories_values[x[0]].append(x[1])#appending values to it's corresponding category key
             else:
