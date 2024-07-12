@@ -1,7 +1,6 @@
 flet
-datetime
-sqlite3
 matplotlib#to gerenate the monthly charts
+# Libs that come's with Python: datetime and sqlite3
 
 #If you're having any trouble running the main.py file, IT'S PROBABLY BECAUSE OF THE IMPORT,
 #and instead of "from TRACKER.name_of_the_py_file import name_of_the_class", just erase the "TRACKER." part 

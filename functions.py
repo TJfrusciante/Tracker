@@ -2,7 +2,10 @@ from multiprocessing import Value
 from tkinter.font import BOLD
 from turtle import bgcolor
 import flet as ft
+import matplotlib
+import matplotlib.lines
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import io
 from PIL import Image
 
@@ -89,25 +92,67 @@ class Functions():
         
     def create_chart(self, e):
         self.sum_values_for_the_chart()
+        
+        #SETTING THE CHART STYLES
+        #['Solarize_Light2', '_classic_test_patch', '_mpl-gallery', '_mpl-gallery-nogrid', 'bmh', 'classic', 'dark_background', 
+        #'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn-v0_8', 'seaborn-v0_8-bright', 'seaborn-v0_8-colorblind',
+        #'seaborn-v0_8-dark', 'seaborn-v0_8-dark-palette', 'seaborn-v0_8-darkgrid', 
+        # 'seaborn-v0_8-deep', 'seaborn-v0_8-muted', 'seaborn-v0_8-notebook', 'seaborn-v0_8-paper', 'seaborn-v0_8-pastel', 
+        # 'seaborn-v0_8-poster', 'seaborn-v0_8-talk', 'seaborn-v0_8-ticks', 'seaborn-v0_8-white', 'seaborn-v0_8-whitegrid', 'tableau-colorblind10']
+        plt.style.use('fivethirtyeight')
         my_colors = ['#FFBF00','#008000','#FF0000','#A020F0','#ffa500','#e94196']
-        bars = plt.bar(
+        #CREATING BAR CHART
+        fig, ax = plt.subplots(figsize=(10, 6))
+    
+        bars = ax.bar(
             self.categorias_list,
             self.valores_list,
             width=0.4
-            
         )
-        for bar in range(len(bars)):
-            bars[bar].set_color(my_colors[bar])
-            yval = bars[bar].get_height()
-            if yval>0:
-                cor='#008000'
-                plt.text(bars[bar].get_x()+0.05, yval + 10, yval, color=cor)
+        
+        legend_handles = []
+        #SETTING EACH BAR
+        for index in range(len(bars)):
+            bars[index].set_edgecolor('black')
+            bars[index].set_linewidth(1.2)
+            legend_handle = matplotlib.lines.Line2D([0], [0], color=my_colors[index], lw=4, label=self.categorias_list[index])
+            legend_handles.append(legend_handle)
+            bars[index].set_color(my_colors[index])
+        
+        #ADDING GRID
+        ax.grid(True, linestyle='--', alpha=0.7,color='#000000')
+        
+        #LABELS AND TITLE
+        ax.set_xlabel('Categorias', fontsize=14, fontweight='bold',color='#000000')
+        ax.set_ylabel('Valores (Reais)', fontsize=14, fontweight='bold',color='#000000')
+        ax.set_title(f'Resumo do mês {self.date_to_chart}', fontsize=16, fontweight='bold', pad=20)
+        
+        #ROTATING X-AXIS LABELS 
+        plt.xticks(rotation=45, ha='right')
+        
+        #ADDING EACH CATEGORY VALUE IN EACH BAR
+        for bar in bars:
+            yval = bar.get_height()
+            if yval > 0:
+                color = '#008000'
             else:
-                cor='#FF0000'
-                plt.text(bars[bar].get_x()+0.05, 0 + 10, yval, color=cor)
+                color = '#FF0000'
+            ax.text(bar.get_x() + bar.get_width()/2, yval + 10, f'${yval}', ha='center', va='bottom', fontsize=12, color=color)
+        
+        #ADD A LEGEND TO EACH CATEGORY
+        ax.legend(handles=legend_handles, loc='upper left', frameon=True)
+        #ADDING BACKGROUND COLOR
+        fig.patch.set_facecolor('lightgrey')
 
-        plt.title(f'Resumo do mês de {self.date_to_chart}')
+        #MAKING SURE THAT THE Y-AXIS IS ALWAYS A BIT HIGHER THAN THE HIGHEST VALUE, SO THE VALUE REPRESENTATION WON'T BE CUT OFF
+        max_value = max(self.valores_list)
+        min_value = min(self.valores_list)
+        ax.set_ylim(min_value + min_value * 0.1, max_value + max_value * 0.1)  # Adding 10% buffer to the top
+        
+        #SHOWING CHART
+        plt.tight_layout()
         plt.show()
+
     #CATEGORY EDITING SCREEN METHODS
     def update_existent_categories(self):
         self.components.existent_categories.controls=[ft.Text(value='Categorias atuais:',color=self.colors.cor_black, weight=ft.FontWeight.BOLD)]
@@ -353,7 +398,7 @@ class Functions():
         if new_transaction_name != '':
             self.data_base.manipular_db('UPDATE money SET description = ? WHERE description = ?', parametros=[new_transaction_name, self.components.edit_data_money])
             if self.components.value_edit_money.value!='':#HAD TO TREAT THIS CAUSE THE '' VALUE CANNOT BE CONVERTED TO INT
-                new_transaction_value= int(self.components.value_edit_money.value)
+                new_transaction_value= float((self.components.value_edit_money.value).replace(',','.'))
                 self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, new_transaction_name])
             if self.components.calendario.value !=None:
                 new_money_date=str(self.components.calendario.value)[0:10]
@@ -365,7 +410,7 @@ class Functions():
             self.components.edit_data_money=new_transaction_name
         else:
             if self.components.value_edit_money.value!='':#HAD TO TREAT THIS CAUSE THE '' VALUE CANNOT BE CONVERTED TO INT
-                new_transaction_value= int(self.components.value_edit_money.value)
+                new_transaction_value= float((self.components.value_edit_money.value).replace(',','.'))
                 self.data_base.manipular_db('UPDATE money SET value = ? WHERE description = ?', parametros=[new_transaction_value, self.components.edit_data_money])
             if self.components.calendario.value !=None:
                 new_money_date=str(self.components.calendario.value)[0:10]
